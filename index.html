@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>คำนวณค่าลูกแบด</title>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#f4f6f3; --card:#fff; --ink:#1d2a21; --muted:#6b7a70; --line:#e2e8e3;
+    --accent:#1f7a4d; --accent-soft:#e3f3ea; --warn:#b4541c;
+  }
+  @media (prefers-color-scheme: dark){
+    :root{ --bg:#121815; --card:#1b231e; --ink:#e7efe9; --muted:#93a399; --line:#2b3730;
+      --accent:#4cc38a; --accent-soft:#1f3328; --warn:#f0a070; }
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);font-family:"IBM Plex Sans Thai",system-ui,sans-serif;font-size:15px}
+  .wrap{max-width:560px;margin:0 auto;padding:16px 14px 40px}
+  h1{font-size:20px;margin:6px 0 14px;display:flex;align-items:center;gap:8px}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px;margin-bottom:12px}
+  .card h2{font-size:14px;margin:0 0 10px;color:var(--muted);font-weight:600;display:flex;justify-content:space-between;align-items:center}
+  .row{display:flex;gap:8px;align-items:center}
+  .grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  label.f{display:flex;flex-direction:column;gap:4px;font-size:13px;color:var(--muted)}
+  input,select,textarea{font:inherit;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:9px 10px;width:100%}
+  input:focus,select:focus,textarea:focus{outline:2px solid var(--accent);outline-offset:-1px}
+  button{font:inherit;cursor:pointer;border-radius:10px;border:1px solid var(--line);background:var(--card);color:var(--ink);padding:9px 12px;white-space:nowrap}
+  button.p{background:var(--accent);border-color:var(--accent);color:#fff;font-weight:600}
+  button.s{padding:5px 9px;font-size:13px}
+  .stepper{display:flex;align-items:center;gap:6px}
+  .stepper button{width:40px;padding:8px 0;font-size:18px;font-weight:600}
+  .stepper input{text-align:center;font-weight:700;font-size:18px}
+  .chips{display:flex;flex-wrap:wrap;gap:8px}
+  .chip{display:flex;align-items:center;gap:6px;border:1px solid var(--line);border-radius:999px;padding:6px 6px 6px 12px;background:var(--bg);user-select:none;cursor:pointer}
+  .chip.on{background:var(--accent-soft);border-color:var(--accent);font-weight:600}
+  .chip .x{border:none;background:none;padding:0 4px;color:var(--muted);font-size:15px}
+  .chip .ck{width:16px;height:16px;border-radius:50%;border:2px solid var(--muted);display:inline-block}
+  .chip.on .ck{background:var(--accent);border-color:var(--accent)}
+  .sum{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;text-align:center}
+  .sum div{background:var(--bg);border-radius:10px;padding:10px 4px}
+  .sum b{display:block;font-size:20px}
+  .sum span{font-size:12px;color:var(--muted)}
+  .big{background:var(--accent);color:#fff;border-radius:12px;padding:14px;text-align:center;margin-top:10px}
+  .big b{font-size:30px;display:block}
+  .note{font-size:12px;color:var(--muted);margin-top:6px}
+  .warn{color:var(--warn)}
+  textarea{min-height:190px;font-size:14px;line-height:1.5;resize:vertical}
+  .toast{position:fixed;left:50%;bottom:20px;transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:9px 16px;border-radius:999px;font-size:14px;opacity:0;transition:.2s;pointer-events:none}
+  .toast.show{opacity:1}
+  .muted{color:var(--muted)}
+  table{width:100%;border-collapse:collapse;font-size:14px}
+  td{padding:6px 4px;border-bottom:1px solid var(--line)}
+  td:last-child{text-align:right;font-weight:600}
+  .paid{text-decoration:line-through;color:var(--muted)}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>🏸 คำนวณค่าลูกแบด</h1>
+
+  <div class="card">
+    <h2>รอบนี้</h2>
+    <div class="grid">
+      <label class="f">วันที่<input type="date" id="date"></label>
+      <label class="f">ราคา/ลูก (บาท)<input type="number" id="price" min="0" inputmode="decimal"></label>
+    </div>
+    <div style="margin-top:10px">
+      <label class="f">จำนวนลูกที่ใช้</label>
+      <div class="stepper" style="margin-top:4px">
+        <button id="minus">−</button>
+        <input type="number" id="shuttles" min="0" inputmode="numeric">
+        <button id="plus">+</button>
+      </div>
+    </div>
+    <div class="grid" style="margin-top:10px">
+      <label class="f">ค่าอื่นๆ (คอร์ท/น้ำ) บาท<input type="number" id="extra" min="0" inputmode="decimal" placeholder="0"></label>
+      <label class="f">ปัดเศษ
+        <select id="round">
+          <option value="1">ปัดขึ้นเป็นบาท</option>
+          <option value="5">ปัดขึ้นทีละ 5</option>
+          <option value="10">ปัดขึ้นทีละ 10</option>
+          <option value="0">ไม่ปัด (ทศนิยม 2)</option>
+        </select>
+      </label>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2><span>คนมาเล่น <span id="cnt" class="muted"></span></span>
+      <span class="row"><button class="s" id="all">เลือกหมด</button><button class="s" id="none">ล้าง</button></span></h2>
+    <div class="chips" id="chips"></div>
+    <div class="row" style="margin-top:12px">
+      <input id="newName" placeholder="เพิ่มชื่อ (คั่นด้วย , ได้หลายคน)">
+      <button class="p" id="add">เพิ่ม</button>
+    </div>
+    <div class="note">แตะชื่อเพื่อติ๊กว่ามา · รายชื่อถูกจำไว้ในเครื่องนี้</div>
+  </div>
+
+  <div class="card">
+    <h2>สรุป</h2>
+    <div class="sum">
+      <div><b id="sShut">0</b><span>ลูก</span></div>
+      <div><b id="sTotal">0</b><span>รวม (บาท)</span></div>
+      <div><b id="sPpl">0</b><span>คน</span></div>
+    </div>
+    <div class="big"><span>คนละ</span><b id="per">–</b><span id="perNote" style="font-size:12px;opacity:.9"></span></div>
+  </div>
+
+  <div class="card">
+    <h2>เช็คการโอน</h2>
+    <table id="payTbl"></table>
+    <div class="note">แตะชื่อเพื่อขีดว่าโอนแล้ว</div>
+  </div>
+
+  <div class="card">
+    <h2>ข้อความส่ง LINE</h2>
+    <label class="f" style="margin-bottom:8px">พร้อมเพย์ / เลขบัญชี (ไม่บังคับ)<input id="pay" placeholder="เช่น 08x-xxx-xxxx"></label>
+    <textarea id="msg" readonly></textarea>
+    <div class="row" style="margin-top:8px">
+      <button class="p" id="copy" style="flex:1">📋 คัดลอกข้อความ</button>
+      <button id="reset">เริ่มรอบใหม่</button>
+    </div>
+  </div>
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+const $ = id => document.getElementById(id);
+const KEY = 'badminton-calc-v1';
+const today = () => { const d=new Date(); d.setMinutes(d.getMinutes()-d.getTimezoneOffset()); return d.toISOString().slice(0,10); };
+let st = { members:[], present:[], paid:[], price:100, shuttles:0, extra:0, round:'1', pay:'', date:today() };
+try { const s = JSON.parse(localStorage.getItem(KEY)||'null'); if (s) st = Object.assign(st, s); } catch(e){}
+const save = () => { try { localStorage.setItem(KEY, JSON.stringify(st)); } catch(e){} };
+
+function fmt(n){ return Number.isInteger(n) ? n.toLocaleString('th-TH') : n.toLocaleString('th-TH',{minimumFractionDigits:2,maximumFractionDigits:2}); }
+function thDate(s){ if(!s) return ''; const d=new Date(s+'T00:00:00'); return d.toLocaleDateString('th-TH',{weekday:'short',day:'numeric',month:'short',year:'2-digit'}); }
+
+function calc(){
+  const ppl = st.present.length;
+  const total = (+st.price||0)*(+st.shuttles||0) + (+st.extra||0);
+  let raw = ppl ? total/ppl : 0, per = raw;
+  const r = +st.round;
+  if (ppl){ per = r ? Math.ceil(raw/r - 1e-9)*r : Math.round(raw*100)/100; }
+  return { ppl, total, raw, per };
+}
+
+function render(){
+  // chips
+  const box = $('chips'); box.innerHTML='';
+  if (!st.members.length) box.innerHTML = '<span class="muted">ยังไม่มีรายชื่อ — เพิ่มด้านล่าง</span>';
+  st.members.forEach(name=>{
+    const on = st.present.includes(name);
+    const c = document.createElement('div'); c.className='chip'+(on?' on':'');
+    c.innerHTML = `<span class="ck"></span><span></span><button class="x" title="ลบ">×</button>`;
+    c.children[1].textContent = name;
+    c.onclick = e => {
+      if (e.target.classList.contains('x')) {
+        st.members = st.members.filter(n=>n!==name); st.present = st.present.filter(n=>n!==name); st.paid = st.paid.filter(n=>n!==name);
+      } else {
+        st.present = on ? st.present.filter(n=>n!==name) : [...st.present, name];
+        if (on) st.paid = st.paid.filter(n=>n!==name);
+      }
+      save(); render();
+    };
+    box.appendChild(c);
+  });
+
+  const {ppl,total,raw,per} = calc();
+  $('cnt').textContent = `(${ppl}/${st.members.length})`;
+  $('sShut').textContent = st.shuttles||0;
+  $('sTotal').textContent = fmt(total);
+  $('sPpl').textContent = ppl;
+  $('per').textContent = ppl ? fmt(per)+' บาท' : '–';
+  const surplus = ppl ? per*ppl - total : 0;
+  $('perNote').textContent = ppl && Math.abs(surplus) > 0.001 ? `(จริง ${fmt(Math.round(raw*100)/100)} · เกิน ${fmt(Math.round(surplus*100)/100)} บาท)` : '';
+
+  // pay table
+  const tbl = $('payTbl'); tbl.innerHTML='';
+  if (!ppl) tbl.innerHTML = '<tr><td class="muted">ยังไม่ได้ติ๊กคนมาเล่น</td><td></td></tr>';
+  st.present.forEach((n,i)=>{
+    const tr = document.createElement('tr'); const isPaid = st.paid.includes(n);
+    tr.style.cursor='pointer';
+    tr.innerHTML = `<td></td><td>${isPaid?'✅':fmt(per)}</td>`;
+    tr.children[0].textContent = `${i+1}. ${n}`;
+    if (isPaid) tr.children[0].className='paid';
+    tr.onclick = () => { st.paid = isPaid ? st.paid.filter(x=>x!==n) : [...st.paid,n]; save(); render(); };
+    tbl.appendChild(tr);
+  });
+  if (ppl){
+    const left = ppl - st.paid.filter(n=>st.present.includes(n)).length;
+    const tr = document.createElement('tr');
+    tr.innerHTML = `<td class="muted">ค้างโอน ${left} คน</td><td>${fmt(left*per)} บาท</td>`;
+    tbl.appendChild(tr);
+  }
+
+  // message
+  const lines = [];
+  lines.push(`🏸 ค่าลูกแบด ${thDate(st.date)}`);
+  lines.push(`ใช้ลูก ${st.shuttles||0} ลูก × ${fmt(+st.price||0)} = ${fmt((+st.price||0)*(+st.shuttles||0))} บาท`);
+  if (+st.extra) lines.push(`ค่าอื่นๆ ${fmt(+st.extra)} บาท`);
+  lines.push(`รวม ${fmt(total)} บาท ÷ ${ppl} คน`);
+  lines.push(`👉 คนละ ${ppl?fmt(per):'-'} บาท`);
+  lines.push('');
+  st.present.forEach((n,i)=> lines.push(`${i+1}. ${n} ${st.paid.includes(n)?'✅':''}`.trim()));
+  if (st.pay.trim()){ lines.push(''); lines.push(`โอนได้ที่: ${st.pay.trim()}`); }
+  lines.push('โอนแล้วแจ้งในกลุ่มได้เลยครับ 🙏');
+  $('msg').value = lines.join('\n');
+}
+
+function bind(id, key, num){
+  const el = $(id); el.value = st[key];
+  el.addEventListener('input', ()=>{ st[key] = num ? (el.value===''?'':+el.value) : el.value; save(); render(); });
+}
+bind('date','date'); bind('price','price',true); bind('shuttles','shuttles',true);
+bind('extra','extra',true); bind('round','round'); bind('pay','pay');
+
+$('plus').onclick = ()=>{ st.shuttles=(+st.shuttles||0)+1; $('shuttles').value=st.shuttles; save(); render(); };
+$('minus').onclick = ()=>{ st.shuttles=Math.max(0,(+st.shuttles||0)-1); $('shuttles').value=st.shuttles; save(); render(); };
+
+function addNames(){
+  const names = $('newName').value.split(/[,\n]/).map(s=>s.trim()).filter(Boolean);
+  names.forEach(n=>{ if(!st.members.includes(n)){ st.members.push(n); } if(!st.present.includes(n)) st.present.push(n); });
+  $('newName').value=''; save(); render(); $('newName').focus();
+}
+$('add').onclick = addNames;
+$('newName').addEventListener('keydown', e=>{ if(e.key==='Enter') addNames(); });
+$('all').onclick = ()=>{ st.present=[...st.members]; save(); render(); };
+$('none').onclick = ()=>{ st.present=[]; st.paid=[]; save(); render(); };
+
+function toast(t){ const el=$('toast'); el.textContent=t; el.classList.add('show'); setTimeout(()=>el.classList.remove('show'),1600); }
+$('copy').onclick = async ()=>{
+  try { await navigator.clipboard.writeText($('msg').value); toast('คัดลอกแล้ว — วางใน LINE ได้เลย'); }
+  catch(e){ const m=$('msg'); m.removeAttribute('readonly'); m.select(); toast('กดค้างแล้วเลือก "คัดลอก"'); m.setAttribute('readonly',''); }
+};
+let resetArm=false;
+$('reset').onclick = ()=>{
+  if(!resetArm){ resetArm=true; $('reset').textContent='แตะอีกครั้งเพื่อยืนยัน'; $('reset').classList.add('warn'); setTimeout(()=>{resetArm=false;$('reset').textContent='เริ่มรอบใหม่';$('reset').classList.remove('warn');},2500); return; }
+  st.present=[]; st.paid=[]; st.shuttles=0; st.extra=''; st.date=today();
+  ['shuttles','extra','date'].forEach(k=>$(k).value=st[k]);
+  resetArm=false; $('reset').textContent='เริ่มรอบใหม่'; $('reset').classList.remove('warn');
+  save(); render(); toast('เริ่มรอบใหม่แล้ว (รายชื่อยังอยู่)');
+};
+render();
+</script>
+</body>
+</html>
